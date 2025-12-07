@@ -1,14 +1,13 @@
 import os
 import shutil
 import logging
-import re  # Added for cleaning text
+import re
 from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import chromadb
-from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
 import PyPDF2
 import uvicorn
@@ -28,7 +27,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 MODEL_NAME = "gemini-flash-latest"
 
 generation_config = {
-    "temperature": 0.7, # Lowered slightly for more accuracy
+    "temperature": 0.7,
     "top_p": 1,
     "top_k": 32,
     "max_output_tokens": 4096,
@@ -49,19 +48,25 @@ app.add_middleware(
 # --- DATABASE SETUP ---
 CHROMA_DB_DIR = "chroma_db"
 chroma_client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-class LocalEmbeddingFunction(chromadb.EmbeddingFunction):
+# --- 🚀 RAM FIX: USE GOOGLE EMBEDDINGS (LIGHTWEIGHT) ---
+# We removed SentenceTransformer to save 800MB of RAM
+class GeminiEmbeddingFunction(chromadb.EmbeddingFunction):
     def __call__(self, input: chromadb.Documents) -> chromadb.Embeddings:
-        return embedding_model.encode(input).tolist()
+        response = genai.embed_content(
+            model="models/text-embedding-004",
+            content=input,
+            task_type="retrieval_document"
+        )
+        return response['embedding']
 
-embedding_func = LocalEmbeddingFunction()
+embedding_func = GeminiEmbeddingFunction()
 collection = chroma_client.get_or_create_collection(
     name="damon_docs",
     embedding_function=embedding_func
 )
 
-# --- MEMORY STORAGE (RAM) ---
+# --- MEMORY STORAGE ---
 CHAT_HISTORY = []
 
 # --- MODELS ---
@@ -74,11 +79,8 @@ class ChatResponse(BaseModel):
 # --- HELPER: TEXT CLEANER ---
 def clean_text(text: str) -> str:
     """Removes markdown symbols like **bold**, *italic*, and #headers"""
-    # Remove bold/italic stars
     text = re.sub(r'\*+', '', text)
-    # Remove headers (#)
     text = re.sub(r'#+\s', '', text)
-    # Remove markdown links [text](url) -> text
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
     return text.strip()
 
@@ -132,14 +134,14 @@ async def ask_question(request: ChatRequest):
         for turn in CHAT_HISTORY[-4:]:
             history_text += f"User: {turn['user']}\nDamon: {turn['damon']}\n"
 
-        # 3. Enhanced Prompt for Accuracy
+        # 3. Enhanced Prompt
         system_prompt = f"""
         You are DAMON, a Vampire AI assistant.
         
         CRITICAL RULES:
         1. Answer based ONLY on the CONTEXT provided below.
-        2. Do NOT use Markdown formatting (no asterisks *, no bolding, no headers). Write plain text only.
-        3. If the user asks "in one word" or "short answer", OBEY STRICTLY. Do not write a full sentence.
+        2. Do NOT use Markdown formatting (no asterisks *, no bolding). Write plain text.
+        3. If the user asks "in one word", OBEY STRICTLY.
         
         CONTEXT FROM PDF:
         {context_text}
@@ -171,4 +173,4 @@ async def clear_memory():
     return {"message": "Memory cleared."}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
