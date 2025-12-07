@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://damonai.onrender.com';
 const VAMPIRE_VOICE_PITCH = 0.6;
 const VAMPIRE_VOICE_RATE = 0.9;
 
