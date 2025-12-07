@@ -1,0 +1,10 @@
+# Ignore the secret key
+backend/.env
+
+# Ignore the heavy database (it will be recreated on the server)
+backend/chroma_db/
+
+# Ignore compiled python files (junk)
+backend/__pycache__/
+__pycache__/
+.DS_Store
