@@ -140,8 +140,9 @@ DamonAI/
 
 **Balashanmugam S** — *The Real World Damon*
 
-  * [GitHub](https://www.google.com/search?q=https://github.com/Balashanmugam30)
-  * [LinkedIn](https://www.linkedin.com/in/your-profile)
+  * [GitHub](https://github.com/Balashanmugam30)
+  * [LinkedIn](https://www.linkedin.com/in/balashanmugams/)
+  * [Instagram](https://www.instagram.com/balaxxh?igsh=MWh1cTd3aTBod3Mycw==)
 
 > *"I build things that live forever... in the cloud."*
 
